@@ -1,0 +1,119 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="620" viewBox="0 0 1180 620" role="img" aria-labelledby="title desc">
+  <title id="title">PPE dataset conversion and training pipeline</title>
+  <desc id="desc">A visual pipeline from YOLO PPE images and labels to faithful question-answer rows, balanced JSONL, mini model fine-tuning, and deployment surfaces.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f8fafc"/>
+      <stop offset="1" stop-color="#f0fdfa"/>
+    </linearGradient>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#475569"/>
+    </marker>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#0f172a" flood-opacity="0.13"/>
+    </filter>
+    <style>
+      .title{font-family:Inter,Arial,sans-serif;font-size:26px;font-weight:800;fill:#0f172a}
+      .label{font-family:Inter,Arial,sans-serif;font-size:17px;font-weight:700;fill:#0f172a}
+      .small{font-family:Inter,Arial,sans-serif;font-size:13px;fill:#475569}
+      .tiny{font-family:Inter,Arial,sans-serif;font-size:12px;fill:#64748b}
+      .box{fill:#fff;stroke:#cbd5e1;stroke-width:1.4;filter:url(#shadow)}
+      .arrow{stroke:#475569;stroke-width:2.4;fill:none;marker-end:url(#arrow)}
+    </style>
+  </defs>
+
+  <rect width="1180" height="620" rx="28" fill="url(#bg)"/>
+  <text x="48" y="54" class="title">PPE data-centric optimization pipeline</text>
+  <text x="48" y="82" class="small">The converter turns detection labels into faithful, low-ambiguity VQA supervision for a small VLM.</text>
+
+  <g transform="translate(50 130)">
+    <rect class="box" width="190" height="150" rx="22"/>
+    <text x="95" y="34" text-anchor="middle" class="label">YOLO PPE data</text>
+    <rect x="30" y="52" width="58" height="48" rx="10" fill="#bfdbfe"/>
+    <path d="M39 94 L58 72 L72 86 L84 66 L88 100 L30 100 Z" fill="#fff"/>
+    <rect x="104" y="56" width="52" height="62" rx="8" fill="#fef3c7" stroke="#f59e0b" stroke-width="2"/>
+    <path d="M116 92 H145" stroke="#ef4444" stroke-width="2"/>
+    <text x="95" y="132" text-anchor="middle" class="small">images + BBox labels</text>
+  </g>
+
+  <path class="arrow" d="M255 205 H325"/>
+
+  <g transform="translate(340 115)">
+    <rect class="box" width="210" height="180" rx="22"/>
+    <text x="105" y="34" text-anchor="middle" class="label">Deterministic parser</text>
+    <text x="105" y="58" text-anchor="middle" class="small">no synthetic hallucination</text>
+    <g transform="translate(36 82)">
+      <rect width="138" height="18" rx="9" fill="#dbeafe"/>
+      <rect y="32" width="106" height="18" rx="9" fill="#ccfbf1"/>
+      <rect y="64" width="126" height="18" rx="9" fill="#fef9c3"/>
+    </g>
+    <text x="105" y="160" text-anchor="middle" class="tiny">helmet · no-helmet · vest · person</text>
+  </g>
+
+  <path class="arrow" d="M565 205 H625"/>
+
+  <g transform="translate(645 80)">
+    <rect class="box" width="210" height="125" rx="22"/>
+    <text x="105" y="34" text-anchor="middle" class="label">Counts</text>
+    <text x="105" y="58" text-anchor="middle" class="small">global object statistics</text>
+    <text x="105" y="90" text-anchor="middle" class="tiny">person=2 · helmet=1 · vest=2</text>
+  </g>
+
+  <g transform="translate(645 235)">
+    <rect class="box" width="210" height="125" rx="22"/>
+    <text x="105" y="34" text-anchor="middle" class="label">Spatial buckets</text>
+    <text x="105" y="58" text-anchor="middle" class="small">BBox center to location</text>
+    <g transform="translate(68 74)">
+      <rect width="24" height="24" fill="#dbeafe" stroke="#93c5fd"/>
+      <rect x="24" width="24" height="24" fill="#ccfbf1" stroke="#5eead4"/>
+      <rect x="48" width="24" height="24" fill="#dbeafe" stroke="#93c5fd"/>
+    </g>
+  </g>
+
+  <path class="arrow" d="M870 140 H930"/>
+  <path class="arrow" d="M870 298 H930"/>
+
+  <g transform="translate(950 96)">
+    <rect class="box" width="180" height="310" rx="24"/>
+    <text x="90" y="34" text-anchor="middle" class="label">QA sample bank</text>
+    <rect x="24" y="58" width="132" height="48" rx="14" fill="#ecfeff" stroke="#67e8f9"/>
+    <text x="90" y="78" text-anchor="middle" class="tiny">yes/no</text>
+    <text x="90" y="96" text-anchor="middle" class="tiny">Is any helmet?</text>
+    <rect x="24" y="126" width="132" height="48" rx="14" fill="#f0fdf4" stroke="#86efac"/>
+    <text x="90" y="146" text-anchor="middle" class="tiny">count_4</text>
+    <text x="90" y="164" text-anchor="middle" class="tiny">0, 1, 2, 3+</text>
+    <rect x="24" y="194" width="132" height="48" rx="14" fill="#fefce8" stroke="#fde047"/>
+    <text x="90" y="214" text-anchor="middle" class="tiny">location_3</text>
+    <text x="90" y="232" text-anchor="middle" class="tiny">left/center/right</text>
+    <rect x="24" y="262" width="132" height="30" rx="15" fill="#ede9fe"/>
+    <text x="90" y="282" text-anchor="middle" class="tiny">seeded sampling</text>
+  </g>
+
+  <path class="arrow" d="M1040 420 V475 H790"/>
+
+  <g transform="translate(560 452)">
+    <rect class="box" width="230" height="110" rx="22"/>
+    <text x="115" y="34" text-anchor="middle" class="label">VQA JSONL</text>
+    <text x="115" y="60" text-anchor="middle" class="small">image · question · answer</text>
+    <text x="115" y="82" text-anchor="middle" class="tiny">task_type · label_space · split</text>
+  </g>
+
+  <path class="arrow" d="M545 507 H435"/>
+
+  <g transform="translate(245 452)">
+    <rect class="box" width="190" height="110" rx="22"/>
+    <text x="95" y="34" text-anchor="middle" class="label">Fine-tune</text>
+    <text x="95" y="60" text-anchor="middle" class="small">MiniMoondream</text>
+    <text x="95" y="82" text-anchor="middle" class="tiny">short-answer generation</text>
+  </g>
+
+  <path class="arrow" d="M230 507 H150"/>
+
+  <g transform="translate(48 452)">
+    <rect class="box" width="102" height="110" rx="22"/>
+    <text x="51" y="32" text-anchor="middle" class="label">Deploy</text>
+    <circle cx="34" cy="64" r="10" fill="#60a5fa"/>
+    <circle cx="68" cy="64" r="10" fill="#34d399"/>
+    <rect x="26" y="82" width="50" height="12" rx="6" fill="#a78bfa"/>
+  </g>
+</svg>

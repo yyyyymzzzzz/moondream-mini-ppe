@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "moondream-mini-ppe"
+version = "0.1.0"
+description = "A lightweight Moondream-style VLM pipeline for PPE visual question answering."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Your Name" }]
+dependencies = [
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.30",
+  "pillow>=10.0",
+  "numpy>=1.26",
+  "pyyaml>=6.0",
+  "torch>=2.3",
+  "tokenizers>=0.19",
+  "pydantic>=2.7",
+]
+
+[project.optional-dependencies]
+dev = ["ruff>=0.6", "pytest>=8.0"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
