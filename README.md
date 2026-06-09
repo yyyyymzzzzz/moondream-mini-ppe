@@ -197,10 +197,25 @@ Create `.env` from `.env.example`, then point it at your local checkpoint and to
 
 ```bash
 cp .env.example .env
+```
+
+Edit `.env` if your checkpoint path is different, then start both backend and frontend:
+
+```bash
+./run_demo.sh
+```
+
+Open `http://localhost:5173`.
+
+![Moondream Mini PPE web demo](docs/assets/web-demo.png)
+
+Manual startup is also supported:
+
+```bash
 export MOONDREAM_CHECKPOINT=checkpoints/moondream-mini/moondream_mini_best.pt
 export MOONDREAM_TOKENIZER=artifacts/tokenizer
 export MOONDREAM_DATA_ROOT=data/moondream_ppe_vqa
-uvicorn apps.api.app:app --host 0.0.0.0 --port 8000
+uvicorn apps.api.app:app --host 127.0.0.1 --port 8000
 ```
 
 In another terminal:
@@ -209,8 +224,6 @@ In another terminal:
 cd apps/web
 npm run dev
 ```
-
-Open `http://localhost:5173`.
 
 ## What Is Not Committed
 
