@@ -38,7 +38,10 @@ def build_prompt(question: str, label_space: str | None = None) -> str:
     elif space == "location_3":
         options = "left, center, right"
     elif space == "location_9":
-        options = "top-left, top-center, top-right, center-left, center, center-right, bottom-left, bottom-center, bottom-right"
+        options = (
+            "top-left, top-center, top-right, center-left, center, "
+            "center-right, bottom-left, bottom-center, bottom-right"
+        )
     else:
         options = "yes, no"
     return f"<image> Question: {q} Options: {options} Answer:"

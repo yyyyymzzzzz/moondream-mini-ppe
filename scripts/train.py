@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import math
+import random
 import time
 from datetime import datetime
 from pathlib import Path
@@ -36,13 +37,19 @@ def parse_args():
     p.add_argument("--image-size", type=int, default=224)
     p.add_argument("--max-text-len", type=int, default=128)
     p.add_argument("--device", type=str, default=None)
+    p.add_argument("--seed", type=int, default=42)
     p.add_argument("--num-workers", type=int, default=8)
     p.add_argument("--use-amp", action="store_true", default=True, help="Use automatic mixed precision on CUDA.")
     p.add_argument("--no-use-amp", dest="use_amp", action="store_false")
     p.add_argument("--print-every", type=int, default=20, help="Print training progress every N steps.")
     p.add_argument("--freeze-vision", action="store_true", default=False)
     p.add_argument("--unfreeze-last-vision-layer", action="store_true")
-    p.add_argument("--freeze-epochs", type=int, default=3, help="How many initial epochs to keep vision frozen before unfreezing it.")
+    p.add_argument(
+        "--freeze-epochs",
+        type=int,
+        default=3,
+        help="How many initial epochs to keep vision frozen before unfreezing it.",
+    )
     p.add_argument("--no-freeze-vision", dest="freeze_vision", action="store_false")
     return p.parse_args()
 
@@ -108,7 +115,11 @@ def run_eval(model, loader, tokenizer, device, image_size, use_amp):
             with torch.cuda.amp.autocast(enabled=use_amp and device.type == "cuda"):
                 logits = model(images, input_ids, attention_mask=attention_mask)
                 text_logits = logits[:, model.cfg.num_image_tokens :, :]
-                loss = F.cross_entropy(text_logits.reshape(-1, text_logits.size(-1)), labels.reshape(-1), ignore_index=-100)
+                loss = F.cross_entropy(
+                    text_logits.reshape(-1, text_logits.size(-1)),
+                    labels.reshape(-1),
+                    ignore_index=-100,
+                )
             total_loss += float(loss.detach().cpu())
             total_acc += accuracy_from_logits(text_logits, labels)
             steps += 1
@@ -124,15 +135,38 @@ def linear_warmup_cosine(step, warmup_steps, total_steps, base_lr):
 
 
 def set_vision_trainable(model, trainable: bool, unfreeze_last_layer: bool = False) -> None:
-    for p in model.vision.parameters():
-        p.requires_grad = trainable
-    if trainable and unfreeze_last_layer and len(model.vision.blocks) > 0:
+    if not trainable:
+        for p in model.vision.parameters():
+            p.requires_grad = False
+        return
+
+    if unfreeze_last_layer and len(model.vision.blocks) > 0:
+        for p in model.vision.parameters():
+            p.requires_grad = False
         for p in model.vision.blocks[-1].parameters():
             p.requires_grad = True
+        for module in (model.vision.ln, model.vision.proj):
+            for p in module.parameters():
+                p.requires_grad = True
+        return
+
+    for p in model.vision.parameters():
+        p.requires_grad = True
+
+
+def seed_everything(seed: int) -> None:
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
 
 
 def main():
     args = parse_args()
+    if args.grad_accumulation_steps < 1:
+        raise ValueError("--grad-accumulation-steps must be at least 1")
+    seed_everything(args.seed)
     device = torch.device(args.device or ("cuda" if torch.cuda.is_available() else "cpu"))
     tokenizer = Tokenizer.from_file(str(args.tokenizer / "tokenizer.json"))
 
@@ -178,7 +212,8 @@ def main():
     scaler = torch.cuda.amp.GradScaler(enabled=args.use_amp and device.type == "cuda")
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
-    total_steps = args.epochs * max(len(train_loader), 1)
+    optimizer_steps_per_epoch = max(math.ceil(len(train_loader) / args.grad_accumulation_steps), 1)
+    total_steps = args.epochs * optimizer_steps_per_epoch
     warmup_steps = max(int(total_steps * args.warmup_ratio), 1)
     best_val_loss = float("inf")
     best_path = None
@@ -209,16 +244,23 @@ def main():
         print(f"[epoch {epoch+1}/{args.epochs}] start")
         for batch_idx, batch in enumerate(train_loader, start=1):
             batch_start = time.time()
-            images, input_ids, labels, attention_mask = build_batch(batch, tokenizer, device, image_size=args.image_size)
+            images, input_ids, labels, attention_mask = build_batch(
+                batch, tokenizer, device, image_size=args.image_size
+            )
             with torch.cuda.amp.autocast(enabled=args.use_amp and device.type == "cuda"):
                 logits = model(images, input_ids, attention_mask=attention_mask)
                 text_logits = logits[:, model.cfg.num_image_tokens :, :]
-                loss = F.cross_entropy(text_logits.reshape(-1, text_logits.size(-1)), labels.reshape(-1), ignore_index=-100)
+                loss = F.cross_entropy(
+                    text_logits.reshape(-1, text_logits.size(-1)),
+                    labels.reshape(-1),
+                    ignore_index=-100,
+                )
                 loss = loss / args.grad_accumulation_steps
             scaler.scale(loss).backward()
             total += float(loss.detach().cpu()) * args.grad_accumulation_steps
 
-            if batch_idx % args.grad_accumulation_steps == 0 or batch_idx == len(train_loader):
+            optimizer_stepped = batch_idx % args.grad_accumulation_steps == 0 or batch_idx == len(train_loader)
+            if optimizer_stepped:
                 if args.max_grad_norm is not None:
                     scaler.unscale_(opt)
                     torch.nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
@@ -231,7 +273,7 @@ def main():
                 global_step += 1
 
             elapsed = time.time() - batch_start
-            if args.print_every and global_step > 0 and global_step % args.print_every == 0:
+            if optimizer_stepped and args.print_every and global_step > 0 and global_step % args.print_every == 0:
                 msg = (
                     f"[train] epoch={epoch+1}/{args.epochs} step={batch_idx}/{len(train_loader)} "
                     f"global_step={global_step} loss={float(loss.detach().cpu()) * args.grad_accumulation_steps:.4f} "
@@ -250,7 +292,14 @@ def main():
         stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
         run_name = args.run_name.strip() or stamp
         ckpt_path = args.output_dir / f"moondream_mini_{run_name}_epoch{epoch+1}_{stamp}.pt"
-        payload = {"model": model.state_dict(), "config": dict(model.cfg.__dict__), "val_loss": val_loss, "val_acc": val_acc}
+        payload = {
+            "model": model.state_dict(),
+            "config": dict(model.cfg.__dict__),
+            "training_args": vars(args),
+            "seed": args.seed,
+            "val_loss": val_loss,
+            "val_acc": val_acc,
+        }
         torch.save(payload, ckpt_path)
         if val_loss < best_val_loss:
             best_val_loss = val_loss

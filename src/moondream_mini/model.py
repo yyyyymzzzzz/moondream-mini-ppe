@@ -35,14 +35,20 @@ class MultiHeadSelfAttention(nn.Module):
         self.proj = nn.Linear(dim, dim)
         self.dropout = nn.Dropout(dropout)
 
-    def forward(self, x: torch.Tensor, attn_mask: Optional[torch.Tensor] = None):
+    def forward(
+        self,
+        x: torch.Tensor,
+        attn_mask: Optional[torch.Tensor] = None,
+        *,
+        is_causal: bool = False,
+    ):
         b, t, d = x.shape
         qkv = self.qkv(x)
         q, k, v = qkv.chunk(3, dim=-1)
         q = q.view(b, t, self.num_heads, self.head_dim).transpose(1, 2)
         k = k.view(b, t, self.num_heads, self.head_dim).transpose(1, 2)
         v = v.view(b, t, self.num_heads, self.head_dim).transpose(1, 2)
-        out = F.scaled_dot_product_attention(q, k, v, attn_mask=attn_mask, is_causal=attn_mask is None)
+        out = F.scaled_dot_product_attention(q, k, v, attn_mask=attn_mask, is_causal=is_causal)
         out = out.transpose(1, 2).contiguous().view(b, t, d)
         return self.dropout(self.proj(out))
 
@@ -60,8 +66,14 @@ class TransformerBlock(nn.Module):
             nn.Linear(ff_dim, dim),
         )
 
-    def forward(self, x: torch.Tensor, attn_mask: Optional[torch.Tensor] = None):
-        x = x + self.attn(self.ln1(x), attn_mask)
+    def forward(
+        self,
+        x: torch.Tensor,
+        attn_mask: Optional[torch.Tensor] = None,
+        *,
+        is_causal: bool = False,
+    ):
+        x = x + self.attn(self.ln1(x), attn_mask, is_causal=is_causal)
         x = x + self.mlp(self.ln2(x))
         return x
 
@@ -76,7 +88,10 @@ class VisionEncoder(nn.Module):
         self.pos_embed = nn.Parameter(torch.zeros(1, num_patches + 1, cfg.vision_dim))
         self.cls_token = nn.Parameter(torch.zeros(1, 1, cfg.vision_dim))
         self.blocks = nn.ModuleList(
-            [TransformerBlock(cfg.vision_dim, cfg.num_heads, cfg.ff_dim, cfg.dropout) for _ in range(cfg.num_vision_layers)]
+            [
+                TransformerBlock(cfg.vision_dim, cfg.num_heads, cfg.ff_dim, cfg.dropout)
+                for _ in range(cfg.num_vision_layers)
+            ]
         )
         self.ln = nn.LayerNorm(cfg.vision_dim)
         self.proj = nn.Linear(cfg.vision_dim, cfg.text_dim)
