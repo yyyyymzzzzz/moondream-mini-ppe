@@ -73,11 +73,13 @@ The PPE VQA data used by this project is converted from public object-detection 
 - [Construction Safety Dataset on Roboflow Universe](https://universe.roboflow.com/roboflow-100/construction-safety-gsnvb)
 - [Personal Protective Equipment (PPE) Dataset on Kaggle](https://www.kaggle.com/datasets/ndomalau/personal-protective-equipment-ppe-dataset)
 
-The repository does not redistribute these datasets. Download them from the original sources, check their licenses and terms, then run the converter locally.
+For course-project reproduction, the prepared dataset can also be downloaded from [SJTU Cloud](https://pan.sjtu.edu.cn/web/share/6a2309e4bf8efc7999f5fbf65016d95d) with extraction code `jat0`.
+
+The Git repository itself does not contain these datasets. Before using or redistributing data from either the original sources or the course mirror, check the corresponding licenses and terms. To prepare the VQA data from the original YOLO datasets, run the converter locally.
 
 ## Evaluation Results
 
-In the original project report, a fine-tuned Moondream-mini checkpoint was evaluated on a held-out PPE test set of 1,488 VQA samples:
+In the original project report, a fine-tuned Moondream-mini checkpoint was evaluated on a held-out PPE test set of 1,488 VQA samples. See [experiment provenance and reproduction notes](docs/experiments.md) for the exact command and current artifact limitations.
 
 | Model | Task | Samples | Correct | Accuracy |
 | --- | --- | ---: | ---: | ---: |
@@ -114,12 +116,14 @@ More details:
 - [Model card](docs/model_card.md)
 - [Architecture notes](docs/architecture.md)
 - [Dataset conversion notes](docs/dataset.md)
+- [Experiment and reproducibility notes](docs/experiments.md)
 - [Local Mac runbook](docs/local_run_mac.md)
+- [Course submission guide](SUBMISSION.md)
 
 ## Install
 
 ```bash
-python -m venv .venv
+python3 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
 ```
@@ -223,6 +227,22 @@ In another terminal:
 ```bash
 cd apps/web
 npm run dev
+```
+
+## Verify
+
+Run the automated checks before submitting or publishing:
+
+```bash
+python -m unittest discover -s tests -v
+python scripts/check_submission.py
+cd apps/web && npm run build
+```
+
+To additionally require local tokenizer and best-checkpoint assets for an offline demonstration:
+
+```bash
+python scripts/check_submission.py --require-demo-assets
 ```
 
 ## What Is Not Committed

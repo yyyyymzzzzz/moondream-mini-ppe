@@ -205,3 +205,4 @@ Open `http://localhost:5173`.
 - This runbook skips downloading or comparing against the full base Moondream model.
 - The smoke checkpoint is only for pipeline verification, not final accuracy.
 - For a real run, use a stronger tokenizer, larger `image_size`, more epochs, and a held-out test evaluation.
+- Before an offline course demonstration, run `python scripts/check_submission.py --require-demo-assets`; the public source archive does not contain the final checkpoint.

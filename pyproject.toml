@@ -9,7 +9,7 @@ description = "A lightweight Moondream-style VLM pipeline for PPE visual questio
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "Apache-2.0" }
-authors = [{ name = "Your Name" }]
+authors = [{ name = "Mingzhe Ye" }]
 dependencies = [
   "fastapi>=0.115",
   "uvicorn[standard]>=0.30",
@@ -30,3 +30,6 @@ where = ["src"]
 [tool.ruff]
 line-length = 120
 target-version = "py310"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
