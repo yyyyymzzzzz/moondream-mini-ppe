@@ -24,11 +24,17 @@ from moondream_mini.prompts import build_prompt, extract_answer, normalize_text,
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".bmp"}
 
+cors_origins = [
+    origin.strip()
+    for origin in os.environ.get("MOONDREAM_CORS_ORIGINS", "*").split(",")
+    if origin.strip()
+]
+
 app = FastAPI(title="Moondream Mini PPE API")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=os.environ.get("MOONDREAM_CORS_ORIGINS", "*").split(","),
-    allow_credentials=True,
+    allow_origins=cors_origins,
+    allow_credentials="*" not in cors_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -115,7 +121,7 @@ def project_data_roots() -> list[Path]:
     if not data_root.is_absolute():
         data_root = PROJECT_ROOT / data_root
     if data_root.exists():
-        roots.append(data_root)
+        roots.append(data_root.resolve())
     return roots
 
 
@@ -145,10 +151,13 @@ def gallery() -> GalleryResponse:
 
 @app.get("/api/image")
 def image(path: str):
-    img_path = (PROJECT_ROOT / path).resolve() if not Path(path).is_absolute() else Path(path)
-    if PROJECT_ROOT not in img_path.parents and img_path != PROJECT_ROOT:
+    img_path = (PROJECT_ROOT / path).resolve() if not Path(path).is_absolute() else Path(path).resolve()
+    allowed_roots = project_data_roots()
+    if not any(img_path.is_relative_to(root) for root in allowed_roots):
         raise HTTPException(status_code=400, detail="Invalid image path")
-    if not img_path.exists():
+    if img_path.suffix.lower() not in IMAGE_EXTS:
+        raise HTTPException(status_code=400, detail="Unsupported image type")
+    if not img_path.is_file():
         raise HTTPException(status_code=404, detail="Image not found")
     return FileResponse(img_path)
 
