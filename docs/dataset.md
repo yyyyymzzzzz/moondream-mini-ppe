@@ -81,3 +81,5 @@ helmet, no-helmet, no-vest, person, vest
 ```
 
 If your dataset uses another order, make sure every dataset root has a correct `data.yaml`.
+
+`--split-map` maps output names to source directories, for example `test:valid`. With `--copy-images`, the generated dataset remains portable. Without it, JSONL rows contain absolute paths back to the source images and are suitable only on the machine where conversion was run.

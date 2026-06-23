@@ -18,7 +18,7 @@ Output JSONL format:
 }
 
 Recommended usage:
-    python scripts/convert_ppe_to_moondream_v3.py \
+    python scripts/convert_ppe_yolo.py \
         --data-dir /path/to/data \
         --output-dir moondream_ppe_vqa_v5 \
         --seed 42 \
@@ -90,9 +90,6 @@ class Counts:
 
 YES_NO_OPTIONS = ["yes", "no"]
 COUNT_OPTIONS = ["0", "1", "2", "3+"]
-LOCATION_OPTIONS = ["top-left", "top-center", "top-right", "center-left", "center", "center-right", "bottom-left", "bottom-center", "bottom-right"]
-
-
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--data-dir", type=Path, required=True, help="Directory containing one or more YOLO dataset roots")
@@ -101,7 +98,12 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--copy-images", action="store_true")
     p.add_argument("--absolute-image-paths", action="store_true")
-    p.add_argument("--samples-per-image", type=int, default=3, help="How many QA pairs to keep per image (after prioritization)")
+    p.add_argument(
+        "--samples-per-image",
+        type=int,
+        default=3,
+        help="How many QA pairs to keep per image (after prioritization)",
+    )
     return p.parse_args()
 
 
@@ -232,7 +234,9 @@ def classify_location(x: float, y: float) -> str:
     return bucket_location(x, y)
 
 
-def build_easy_samples(records: list[BoxRecord], counts: Counts) -> list[tuple[str, str, str, str]]:
+def build_easy_samples(
+    records: list[BoxRecord], counts: Counts, class_names: list[str]
+) -> list[tuple[str, str, str, str]]:
     # Classification-style dataset: each answer belongs to a fixed label space.
     samples: list[tuple[str, str, str, str]] = []
     samples.append((QUESTION_TEMPLATES["yes_no_helmet"][0], answer_yes_no(counts.helmet > 0), "yes_no", "yes_no"))
@@ -241,19 +245,33 @@ def build_easy_samples(records: list[BoxRecord], counts: Counts) -> list[tuple[s
     samples.append((QUESTION_TEMPLATES["count_person"][0], classify_count(counts.person), "count", "count_4"))
     samples.append((QUESTION_TEMPLATES["count_helmet"][0], classify_count(counts.helmet), "count", "count_4"))
     samples.append((QUESTION_TEMPLATES["count_vest"][0], classify_count(counts.vest), "count", "count_4"))
+    first_locations: dict[str, BoxRecord] = {}
     for rec in records:
-        if 0 <= rec.class_id < 5:
-            cls_name = normalize_class_name(DEFAULT_CLASS_NAMES[rec.class_id])
-            if cls_name == "helmet":
-                samples.append((QUESTION_TEMPLATES["location_helmet"][0], classify_location(rec.x_center, rec.y_center), "location", "location_3"))
-                break
-            if cls_name == "vest":
-                samples.append((QUESTION_TEMPLATES["location_vest"][0], classify_location(rec.x_center, rec.y_center), "location", "location_3"))
-                break
+        if 0 <= rec.class_id < len(class_names):
+            cls_name = normalize_class_name(class_names[rec.class_id])
+            if cls_name in {"helmet", "vest"} and cls_name not in first_locations:
+                first_locations[cls_name] = rec
+    for cls_name, template_name in (("helmet", "location_helmet"), ("vest", "location_vest")):
+        if rec := first_locations.get(cls_name):
+            samples.append(
+                (
+                    QUESTION_TEMPLATES[template_name][0],
+                    classify_location(rec.x_center, rec.y_center),
+                    "location",
+                    "location_3",
+                )
+            )
     return samples
 
 
-def copy_or_reference_image(image_path: Path, dataset_root: Path, out_split: str, output_dir: Path, copy_images: bool, absolute_paths: bool) -> str:
+def copy_or_reference_image(
+    image_path: Path,
+    dataset_root: Path,
+    out_split: str,
+    output_dir: Path,
+    copy_images: bool,
+    absolute_paths: bool,
+) -> str:
     if absolute_paths:
         return str(image_path.resolve())
     if copy_images:
@@ -264,11 +282,14 @@ def copy_or_reference_image(image_path: Path, dataset_root: Path, out_split: str
         if not copied_path.exists():
             shutil.copy2(image_path, copied_path)
         return str(Path("images") / out_split / copied_name)
-    return str(image_path.relative_to(dataset_root))
+    # Without copied images, use an absolute reference so the generated JSONL
+    # remains usable when it is stored outside the source dataset root.
+    return str(image_path.resolve())
 
 
 def process_split(
     split_name: str,
+    source_split: str,
     dataset_roots: list[Path],
     class_names: list[str],
     output_dir: Path,
@@ -284,7 +305,7 @@ def process_split(
 
     with out_path.open("w", encoding="utf-8") as f:
         for dataset_root in dataset_roots:
-            image_dir, label_dir = image_dir_and_label_dir(dataset_root, split_name)
+            image_dir, label_dir = image_dir_and_label_dir(dataset_root, source_split)
             for image_path in iter_images(image_dir):
                 key = f"{dataset_root.name}:{image_path.name}"
                 if key in seen:
@@ -296,11 +317,18 @@ def process_split(
                 counts = count_objects(records, class_names)
 
                 # Stable classification samples with explicit label spaces.
-                samples = build_easy_samples(records, counts)
+                samples = build_easy_samples(records, counts, class_names)
                 rng.shuffle(samples)
                 samples = samples[:samples_per_image]
 
-                image_value = copy_or_reference_image(image_path, dataset_root, split_name, output_dir, copy_images, absolute_image_paths)
+                image_value = copy_or_reference_image(
+                    image_path,
+                    dataset_root,
+                    split_name,
+                    output_dir,
+                    copy_images,
+                    absolute_image_paths,
+                )
                 for question, answer, task_type, label_space in samples:
                     f.write(
                         json.dumps(
@@ -347,9 +375,10 @@ def main() -> None:
 
     split_map = parse_split_map(args.split_map)
     split_stats = {}
-    for out_split, _src_split in split_map.items():
+    for out_split, src_split in split_map.items():
         split_stats[out_split] = process_split(
             split_name=out_split,
+            source_split=src_split,
             dataset_roots=dataset_roots,
             class_names=reference_class_names,
             output_dir=output_dir,
@@ -362,7 +391,10 @@ def main() -> None:
     write_report(output_dir, reference_class_names, split_stats)
     print("Conversion complete.")
     for split_name, stats in split_stats.items():
-        print(f"{split_name}: {stats['images']} images -> {stats['samples']} samples (count={stats['count']}, yes_no={stats['yes_no']})")
+        print(
+            f"{split_name}: {stats['images']} images -> {stats['samples']} samples "
+            f"(count={stats['count']}, yes_no={stats['yes_no']})"
+        )
     print(f"Output written to: {output_dir}")
 
 
