@@ -19,10 +19,12 @@ The source archive intentionally excludes `.env`, datasets, checkpoints, tokeniz
 
 If grading requires the program to run without downloading or training, prepare a separate authorized bundle containing:
 
-- `artifacts/tokenizer/tokenizer.json`
-- a final `checkpoints/**/_best.pt` checkpoint
-- a small set of redistributable example images
+- `artifacts/moondream_starmie_v1/tokenizer.json`
+- `moondream-mini-v6-checkpoint/moondream_mini_20260605-192733_best.pt`
+- `moondream_ppe_vqa_data_v6/` or a small set of redistributable example images
 - `.env.example` copied to `.env`
+
+The current course artifact bundle is available from [SJTU Cloud](https://pan.sjtu.edu.cn/web/share/554d112a8ad57d66a08c73cecf679225) with extraction code `3gsy`.
 
 Then run:
 
@@ -33,4 +35,4 @@ python scripts/check_submission.py --require-demo-assets
 
 Do not include the entire third-party dataset unless its license explicitly permits redistribution. Include source URLs and license information for every bundled sample image.
 
-The local smoke checkpoint is only a pipeline test and must not be presented as the final trained model.
+The local smoke checkpoint is only a pipeline test and must not be presented as the final trained model. The v6 checkpoint must always be paired with the exact `moondream_starmie_v1` tokenizer.

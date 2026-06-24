@@ -15,12 +15,12 @@ from moondream_mini.prompts import build_prompt, extract_answer, normalize_text
 
 def parse_args():
     p = argparse.ArgumentParser(description="Evaluate Moondream-mini on PPE VQA JSONL data")
-    p.add_argument("--test-jsonl", type=Path, default=Path("data/moondream_ppe_vqa/test.jsonl"))
-    p.add_argument("--image-root", type=Path, default=Path("data/moondream_ppe_vqa"))
-    p.add_argument("--tokenizer", type=Path, default=Path("artifacts/tokenizer"))
+    p.add_argument("--test-jsonl", type=Path, default=Path("moondream_ppe_vqa_data_v6/test.jsonl"))
+    p.add_argument("--image-root", type=Path, default=Path("moondream_ppe_vqa_data_v6"))
+    p.add_argument("--tokenizer", type=Path, default=Path("artifacts/moondream_starmie_v1"))
     p.add_argument("--checkpoint", type=Path, required=True)
     p.add_argument("--device", type=str, default=None)
-    p.add_argument("--max-new-tokens", type=int, default=16)
+    p.add_argument("--max-new-tokens", type=int, default=8)
     p.add_argument("--temperature", type=float, default=0.0)
     p.add_argument("--repetition-penalty", type=float, default=1.08)
     p.add_argument("--no-repeat-ngram-size", type=int, default=3)

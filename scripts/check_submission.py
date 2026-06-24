@@ -47,9 +47,14 @@ def main() -> int:
         print(status)
 
     if args.require_demo_assets:
-        tokenizer = ROOT / "artifacts/tokenizer/tokenizer.json"
-        checkpoints = list((ROOT / "checkpoints").glob("**/*_best.pt")) if (ROOT / "checkpoints").exists() else []
-        if not tokenizer.is_file():
+        v6_tokenizer = ROOT / "artifacts/moondream_starmie_v1/tokenizer.json"
+        generic_tokenizer = ROOT / "artifacts/tokenizer/tokenizer.json"
+        checkpoint_roots = [ROOT / "moondream-mini-v6-checkpoint", ROOT / "checkpoints"]
+        checkpoints = [path for root in checkpoint_roots if root.exists() for path in root.glob("**/*_best.pt")]
+        has_v6_checkpoint = any("v6" in str(path).lower() or "20260605-192733" in path.name for path in checkpoints)
+        if has_v6_checkpoint and not v6_tokenizer.is_file():
+            errors.append("offline demo tokenizer is missing (expected moondream_starmie_v1/tokenizer.json)")
+        elif not has_v6_checkpoint and not (v6_tokenizer.is_file() or generic_tokenizer.is_file()):
             errors.append("offline demo tokenizer is missing")
         if not checkpoints:
             errors.append("offline demo best checkpoint is missing")

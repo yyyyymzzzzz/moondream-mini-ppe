@@ -23,6 +23,9 @@ class MiniConfig:
     ff_dim: int = 384
     max_text_len: int = 128
     dropout: float = 0.1
+    # The final v6 checkpoint was trained with causal attention inside the
+    # vision blocks. Keep that behavior as the compatibility default.
+    vision_is_causal: bool = True
 
 
 class MultiHeadSelfAttention(nn.Module):
@@ -113,7 +116,7 @@ class VisionEncoder(nn.Module):
         x = torch.cat([cls, x], dim=1)
         x = x + self._positional_encoding(h, w, x.device, x.dtype)
         for block in self.blocks:
-            x = block(x)
+            x = block(x, is_causal=self.cfg.vision_is_causal)
         x = self.ln(x)
         return self.proj(x)
 

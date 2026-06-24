@@ -45,7 +45,7 @@ class InferRequest(BaseModel):
     question: str
     task_type: str | None = None
     label_space: str | None = None
-    max_new_tokens: int = 16
+    max_new_tokens: int = 8
     temperature: float = 0.0
     repetition_penalty: float = 1.08
     no_repeat_ngram_size: int = 3
@@ -83,7 +83,7 @@ def required_path(env_name: str, default: str | None = None) -> Path:
 
 @lru_cache(maxsize=1)
 def get_tokenizer() -> Tokenizer:
-    tokenizer_dir = required_path("MOONDREAM_TOKENIZER", "artifacts/tokenizer")
+    tokenizer_dir = required_path("MOONDREAM_TOKENIZER", "artifacts/moondream_starmie_v1")
     tokenizer_path = tokenizer_dir / "tokenizer.json"
     if not tokenizer_path.exists():
         raise RuntimeError(f"Tokenizer not found: {tokenizer_path}")
@@ -117,7 +117,7 @@ def decode_image_payload(data: str) -> Image.Image:
 
 def project_data_roots() -> list[Path]:
     roots: list[Path] = []
-    data_root = Path(os.environ.get("MOONDREAM_DATA_ROOT", PROJECT_ROOT / "data"))
+    data_root = Path(os.environ.get("MOONDREAM_DATA_ROOT", PROJECT_ROOT / "moondream_ppe_vqa_data_v6"))
     if not data_root.is_absolute():
         data_root = PROJECT_ROOT / data_root
     if data_root.exists():

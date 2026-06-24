@@ -43,6 +43,8 @@ image tokens + text tokens
 
 The fusion path is intentionally simple: encoded image tokens are prepended to text tokens. This keeps the model easy to inspect, easy to train from scratch, and small enough for local experimentation.
 
+For reproducibility, the final v6 model configuration sets `vision_is_causal=true`, matching the attention behavior used during its June 2026 training run. A bidirectional vision-block variant can be created with `vision_is_causal=false`, but it is not compatible with the reported v6 metrics without retraining.
+
 ## Data Flow
 
 ```text

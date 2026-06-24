@@ -28,6 +28,9 @@ class ModelAndTrainingTests(unittest.TestCase):
         logits = self.model(torch.rand(2, 3, 32, 32), torch.ones(2, 3, dtype=torch.long))
         self.assertEqual(tuple(logits.shape), (2, 8, 32))
 
+    def test_v6_vision_attention_compatibility_is_default(self):
+        self.assertTrue(self.model.cfg.vision_is_causal)
+
     def test_unfreeze_last_layer_keeps_earlier_blocks_frozen(self):
         set_vision_trainable(self.model, False)
         set_vision_trainable(self.model, True, unfreeze_last_layer=True)

@@ -28,6 +28,8 @@ The default mini configuration uses:
 - image tokens prepended before text tokens
 - language-model head for answer generation
 
+The final v6 checkpoint used causal self-attention inside its compact vision blocks. The `vision_is_causal` configuration defaults to `true` for checkpoint compatibility; changing it defines a new model variant that must be retrained and reevaluated.
+
 The model generates short labels such as `yes`, `no`, `0`, `1`, `2`, `3+`, `left`, `center`, and `right`.
 
 ## Training Task
@@ -57,4 +59,5 @@ The PPE-specific conversion strategy is part of the model recipe:
 - The model is specialized for PPE QA and may not generalize to broad VLM tasks.
 - Coarse labels are easier to train but less expressive than bounding boxes or dense captions.
 - Performance depends strongly on dataset quality, camera angle, class balance, and tokenizer choice.
+- The final checkpoint requires the exact `moondream_starmie_v1` tokenizer vocabulary.
 - Published weights should include evaluation results for the exact dataset and split used.

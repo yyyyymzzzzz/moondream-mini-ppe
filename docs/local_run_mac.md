@@ -202,6 +202,7 @@ Open `http://localhost:5173`.
 
 ## Notes
 
+- Final v6 artifacts are available from [SJTU Cloud](https://pan.sjtu.edu.cn/web/share/554d112a8ad57d66a08c73cecf679225), extraction code `3gsy`. See `docs/experiments.md` for the exact final commands.
 - This runbook skips downloading or comparing against the full base Moondream model.
 - The smoke checkpoint is only for pipeline verification, not final accuracy.
 - For a real run, use a stronger tokenizer, larger `image_size`, more epochs, and a held-out test evaluation.

@@ -9,12 +9,19 @@ model:
   ff_dim: 384
   max_text_len: 128
   dropout: 0.1
+  vision_is_causal: true  # Compatibility with the final v6 checkpoint.
 
 training:
-  epochs: 20
-  batch_size: 16
+  epochs: 30
+  batch_size: 32
   grad_accumulation_steps: 1
-  lr: 0.0001
+  lr: 0.00003
   weight_decay: 0.01
   warmup_ratio: 0.05
   max_grad_norm: 1.0
+  freeze_vision: true
+  freeze_epochs: 3
+  max_new_tokens: 8
+  temperature: 0.0
+  repetition_penalty: 1.08
+  no_repeat_ngram_size: 3

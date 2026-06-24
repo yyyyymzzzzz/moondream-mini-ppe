@@ -21,16 +21,16 @@ from moondream_mini.prompts import build_prompt, normalize_text
 
 def parse_args():
     p = argparse.ArgumentParser(description="Train Moondream-mini on PPE VQA data")
-    p.add_argument("--train-jsonl", type=Path, default=Path("data/moondream_ppe_vqa/train.jsonl"))
-    p.add_argument("--val-jsonl", type=Path, default=Path("data/moondream_ppe_vqa/val.jsonl"))
-    p.add_argument("--image-root", type=Path, default=Path("data/moondream_ppe_vqa"))
-    p.add_argument("--tokenizer", type=Path, default=Path("artifacts/tokenizer"))
-    p.add_argument("--output-dir", type=Path, default=Path("checkpoints/moondream-mini"))
+    p.add_argument("--train-jsonl", type=Path, default=Path("moondream_ppe_vqa_data_v6/train.jsonl"))
+    p.add_argument("--val-jsonl", type=Path, default=Path("moondream_ppe_vqa_data_v6/val.jsonl"))
+    p.add_argument("--image-root", type=Path, default=Path("moondream_ppe_vqa_data_v6"))
+    p.add_argument("--tokenizer", type=Path, default=Path("artifacts/moondream_starmie_v1"))
+    p.add_argument("--output-dir", type=Path, default=Path("moondream-mini-v6-checkpoint"))
     p.add_argument("--run-name", type=str, default="", help="Optional run name used in checkpoint filename.")
-    p.add_argument("--epochs", type=int, default=20)
-    p.add_argument("--batch-size", type=int, default=16)
+    p.add_argument("--epochs", type=int, default=30)
+    p.add_argument("--batch-size", type=int, default=32)
     p.add_argument("--grad-accumulation-steps", type=int, default=1)
-    p.add_argument("--lr", type=float, default=1e-4)
+    p.add_argument("--lr", type=float, default=3e-5)
     p.add_argument("--weight-decay", type=float, default=0.01)
     p.add_argument("--warmup-ratio", type=float, default=0.05)
     p.add_argument("--max-grad-norm", type=float, default=1.0)
@@ -218,6 +218,8 @@ def main():
     best_val_loss = float("inf")
     best_path = None
     vision_unfrozen = not args.freeze_vision
+    run_started_at = datetime.now().strftime("%Y%m%d-%H%M%S")
+    run_name = args.run_name.strip() or run_started_at
 
     print(
         f"[init] device={device} train_size={len(train_ds)} val_size={len(val_ds)} "
@@ -290,7 +292,6 @@ def main():
         )
 
         stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-        run_name = args.run_name.strip() or stamp
         ckpt_path = args.output_dir / f"moondream_mini_{run_name}_epoch{epoch+1}_{stamp}.pt"
         payload = {
             "model": model.state_dict(),
@@ -303,9 +304,9 @@ def main():
         torch.save(payload, ckpt_path)
         if val_loss < best_val_loss:
             best_val_loss = val_loss
-            best_path = ckpt_path
-            torch.save(payload, args.output_dir / f"moondream_mini_{run_name}_best.pt")
-            print(f"[save] best checkpoint updated -> {args.output_dir / f'moondream_mini_{run_name}_best.pt'}")
+            best_path = args.output_dir / f"moondream_mini_{run_name}_best.pt"
+            torch.save(payload, best_path)
+            print(f"[save] best checkpoint updated -> {best_path}")
 
     if best_path is not None:
         print(f"[done] best checkpoint: {best_path}")

@@ -93,7 +93,7 @@ COUNT_OPTIONS = ["0", "1", "2", "3+"]
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--data-dir", type=Path, required=True, help="Directory containing one or more YOLO dataset roots")
-    p.add_argument("--output-dir", type=Path, default=Path("moondream_ppe_vqa_v3"))
+    p.add_argument("--output-dir", type=Path, default=Path("moondream_ppe_vqa_data_v6"))
     p.add_argument("--split-map", type=str, default="train:train,val:valid,test:test")
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--copy-images", action="store_true")

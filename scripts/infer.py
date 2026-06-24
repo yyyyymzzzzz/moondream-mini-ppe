@@ -21,7 +21,7 @@ def parse_args():
     p.add_argument("--task-type", type=str, default=None, choices=["yes_no", "count", "location"])
     p.add_argument("--label-space", type=str, default=None, choices=["yes_no", "count_4", "location_3"])
     p.add_argument("--device", type=str, default=None)
-    p.add_argument("--max-new-tokens", type=int, default=16)
+    p.add_argument("--max-new-tokens", type=int, default=8)
     p.add_argument("--temperature", type=float, default=0.0)
     p.add_argument("--repetition-penalty", type=float, default=1.08)
     p.add_argument("--no-repeat-ngram-size", type=int, default=3)

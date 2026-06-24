@@ -73,7 +73,23 @@ The PPE VQA data used by this project is converted from public object-detection 
 - [Construction Safety Dataset on Roboflow Universe](https://universe.roboflow.com/roboflow-100/construction-safety-gsnvb)
 - [Personal Protective Equipment (PPE) Dataset on Kaggle](https://www.kaggle.com/datasets/ndomalau/personal-protective-equipment-ppe-dataset)
 
-For course-project reproduction, the prepared dataset can also be downloaded from [SJTU Cloud](https://pan.sjtu.edu.cn/web/share/6a2309e4bf8efc7999f5fbf65016d95d) with extraction code `jat0`.
+For course-project reproduction, download the complete course bundle from [SJTU Cloud](https://pan.sjtu.edu.cn/web/share/554d112a8ad57d66a08c73cecf679225) with extraction code `3gsy`.
+
+```text
+Big-Data-Analysis-and-Application-Course-Project/
+├── raw–data/                         # Original YOLO datasets
+├── moondream–mini–v6–checkpoint/     # Final v6 training checkpoint
+└── moondream_ppe_vqa_data_v6/        # Converted train/val/test JSONL and images
+```
+
+The cloud UI uses typographic dashes (`–`) in two directory names. For reliable shell commands, rename them to the repository's ASCII path convention after downloading:
+
+```bash
+mv 'raw–data' raw-data
+mv 'moondream–mini–v6–checkpoint' moondream-mini-v6-checkpoint
+```
+
+The final v6 checkpoint must be used with the exact `moondream_starmie_v1/tokenizer.json` tokenizer from the original run. Place that tokenizer at `artifacts/moondream_starmie_v1/`. A tokenizer with another vocabulary size is not checkpoint-compatible. If the downloaded checkpoint folder does not contain the tokenizer, it still needs to be added to the shared bundle.
 
 The Git repository itself does not contain these datasets. Before using or redistributing data from either the original sources or the course mirror, check the corresponding licenses and terms. To prepare the VQA data from the original YOLO datasets, run the converter locally.
 
@@ -149,50 +165,63 @@ Expected input is one or more YOLO dataset roots under a parent directory:
     └── valid/labels
 ```
 
-Convert it to VQA JSONL:
+After placing the downloaded `raw-data/` directory in the repository root, reproduce the v6 conversion with:
 
 ```bash
 python scripts/convert_ppe_yolo.py \
-  --data-dir /path/to/ppe-yolo \
-  --output-dir data/moondream_ppe_vqa \
+  --data-dir raw-data \
+  --output-dir moondream_ppe_vqa_data_v6 \
+  --seed 42 \
   --copy-images \
   --samples-per-image 3
 ```
 
 ## Train
 
-Place or generate a tokenizer at `artifacts/tokenizer/tokenizer.json`, then run:
+Place the final tokenizer at `artifacts/moondream_starmie_v1/tokenizer.json`, then run the repository-aligned version of the final training command:
 
 ```bash
 python scripts/train.py \
-  --train-jsonl data/moondream_ppe_vqa/train.jsonl \
-  --val-jsonl data/moondream_ppe_vqa/val.jsonl \
-  --image-root data/moondream_ppe_vqa \
-  --tokenizer artifacts/tokenizer \
-  --output-dir checkpoints/moondream-mini \
-  --epochs 20 \
-  --batch-size 16 \
-  --image-size 224
+  --train-jsonl moondream_ppe_vqa_data_v6/train.jsonl \
+  --val-jsonl moondream_ppe_vqa_data_v6/val.jsonl \
+  --image-root moondream_ppe_vqa_data_v6 \
+  --output-dir moondream-mini-v6-checkpoint \
+  --tokenizer artifacts/moondream_starmie_v1 \
+  --epochs 30 \
+  --batch-size 32 \
+  --lr 3e-5 \
+  --warmup-ratio 0.05 \
+  --max-grad-norm 1.0 \
+  --image-size 224 \
+  --max-text-len 128 \
+  --freeze-vision \
+  --freeze-epochs 3 \
+  --seed 42
 ```
 
 ## CLI Inference
 
 ```bash
 python scripts/infer.py \
-  --image data/moondream_ppe_vqa/images/val/example.jpg \
+  --image moondream_ppe_vqa_data_v6/images/val/example.jpg \
   --question "How many workers wear safety helmets?" \
-  --tokenizer artifacts/tokenizer \
-  --checkpoint checkpoints/moondream-mini/moondream_mini_best.pt
+  --tokenizer artifacts/moondream_starmie_v1 \
+  --checkpoint moondream-mini-v6-checkpoint/moondream_mini_20260605-192733_best.pt \
+  --max-new-tokens 8
 ```
 
 ## Evaluate
 
 ```bash
 python scripts/evaluate.py \
-  --test-jsonl data/moondream_ppe_vqa/test.jsonl \
-  --image-root data/moondream_ppe_vqa \
-  --tokenizer artifacts/tokenizer \
-  --checkpoint checkpoints/moondream-mini/moondream_mini_best.pt
+  --test-jsonl moondream_ppe_vqa_data_v6/test.jsonl \
+  --image-root moondream_ppe_vqa_data_v6 \
+  --tokenizer artifacts/moondream_starmie_v1 \
+  --checkpoint moondream-mini-v6-checkpoint/moondream_mini_20260605-192733_best.pt \
+  --max-new-tokens 8 \
+  --temperature 0.0 \
+  --repetition-penalty 1.08 \
+  --no-repeat-ngram-size 3
 ```
 
 ## API and Web Demo
@@ -216,9 +245,9 @@ Open `http://localhost:5173`.
 Manual startup is also supported:
 
 ```bash
-export MOONDREAM_CHECKPOINT=checkpoints/moondream-mini/moondream_mini_best.pt
-export MOONDREAM_TOKENIZER=artifacts/tokenizer
-export MOONDREAM_DATA_ROOT=data/moondream_ppe_vqa
+export MOONDREAM_CHECKPOINT=moondream-mini-v6-checkpoint/moondream_mini_20260605-192733_best.pt
+export MOONDREAM_TOKENIZER=artifacts/moondream_starmie_v1
+export MOONDREAM_DATA_ROOT=moondream_ppe_vqa_data_v6
 uvicorn apps.api.app:app --host 127.0.0.1 --port 8000
 ```
 
@@ -249,13 +278,13 @@ python scripts/check_submission.py --require-demo-assets
 
 The repository intentionally excludes:
 
-- raw datasets
-- generated JSONL/image copies under `data/`
-- checkpoints and model weights
+- downloaded `raw-data/`
+- converted `moondream_ppe_vqa_data_v6/`
+- downloaded `moondream-mini-v6-checkpoint/`
 - tokenizer artifacts
 - local logs, notebooks, cache files, and `.env`
 
-For GitHub releases, publish weights separately through GitHub Releases, Hugging Face, or another artifact host.
+The course artifact bundle is published separately through the SJTU Cloud link above so the Git history remains small.
 
 ## License
 

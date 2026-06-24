@@ -59,14 +59,17 @@ resolve_project_path() {
 }
 
 if [[ -z "${MOONDREAM_CHECKPOINT:-}" ]]; then
-  default_checkpoint="$(find "$ROOT_DIR/checkpoints" -name '*_best.pt' -print 2>/dev/null | sort | head -1 || true)"
+  default_checkpoint="$(
+    find "$ROOT_DIR/moondream-mini-v6-checkpoint" "$ROOT_DIR/checkpoints" \
+      -name '*_best.pt' -print 2>/dev/null | sort | head -1 || true
+  )"
   if [[ -n "$default_checkpoint" ]]; then
     export MOONDREAM_CHECKPOINT="$default_checkpoint"
   fi
 fi
 
-export MOONDREAM_TOKENIZER="$(resolve_project_path "${MOONDREAM_TOKENIZER:-artifacts/tokenizer}")"
-export MOONDREAM_DATA_ROOT="$(resolve_project_path "${MOONDREAM_DATA_ROOT:-data/moondream_ppe_vqa}")"
+export MOONDREAM_TOKENIZER="$(resolve_project_path "${MOONDREAM_TOKENIZER:-artifacts/moondream_starmie_v1}")"
+export MOONDREAM_DATA_ROOT="$(resolve_project_path "${MOONDREAM_DATA_ROOT:-moondream_ppe_vqa_data_v6}")"
 if [[ -n "${MOONDREAM_CHECKPOINT:-}" ]]; then
   export MOONDREAM_CHECKPOINT="$(resolve_project_path "$MOONDREAM_CHECKPOINT")"
 fi
@@ -80,7 +83,7 @@ fi
 
 if [[ ! -d "$MOONDREAM_TOKENIZER" ]]; then
   echo "Tokenizer directory not found: $MOONDREAM_TOKENIZER" >&2
-  echo "Create artifacts/tokenizer/tokenizer.json first, or set MOONDREAM_TOKENIZER in .env." >&2
+  echo "Place moondream_starmie_v1/tokenizer.json under artifacts, or set MOONDREAM_TOKENIZER in .env." >&2
   exit 1
 fi
 

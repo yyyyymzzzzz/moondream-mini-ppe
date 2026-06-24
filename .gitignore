@@ -23,6 +23,10 @@ artifacts/
 checkpoints/
 outputs/
 runs/
+# Downloaded v6 course bundle directories
+raw-data/
+moondream_ppe_vqa_data_v6/
+moondream-mini-v6-checkpoint/
 *.pt
 *.pth
 *.safetensors
